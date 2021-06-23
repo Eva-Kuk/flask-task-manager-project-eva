@@ -25,6 +25,16 @@ def get_tasks():
     return render_template("tasks.html", tasks=tasks)
 
 
+@app.route("/search", methods=["GET", "POST"])
+def search():
+    query = request.form.get("query")
+    # would need destroy the query after each call
+    mongo.db.tasks.create_index([("task_name", "text"), ("task_description", "text")])
+    tasks = list(mongo.db.tasks.find({"$text": {"$search": query}}))
+    return render_template("tasks.html", tasks=tasks)
+
+
+
 @app.route("/register", methods=["GET", "POST"])
 def register():
     if request.method == "POST":
@@ -85,7 +95,6 @@ def profile(username):
     username = mongo.db.users.find_one(
         {"username": session["user"]})["username"]
 
-
     if session["user"]:
         return render_template("profile.html", username=username)
 
@@ -94,7 +103,7 @@ def profile(username):
 
 @app.route("/logout")
 def logout():
-    # remove user from session cookies
+    # remove user from session cookie
     flash("You have been logged out")
     session.pop("user")
     return redirect(url_for("login"))
@@ -160,8 +169,9 @@ def add_category():
             "category_name": request.form.get("category_name")
         }
         mongo.db.categories.insert_one(category)
-        flash("New category Added")
+        flash("New Category Added")
         return redirect(url_for("get_categories"))
+
     return render_template("add_category.html")
 
 
@@ -183,7 +193,7 @@ def edit_category(category_id):
 def delete_category(category_id):
     mongo.db.categories.remove({"_id": ObjectId(category_id)})
     flash("Category Successfully Deleted")
-    return redirect(url_for())
+    return redirect(url_for("get_categories"))
 
 
 if __name__ == "__main__":
